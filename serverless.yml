@@ -24,8 +24,8 @@ provider:
       Action:
         - s3:*
       Resource:
-        - "arn:aws:s3:::${env:APP_AWS_BUCKET}"
-        - "arn:aws:s3:::${env:APP_AWS_BUCKET}/*"
+        - "arn:aws:s3:::${env:APP_AWS_FILE_BUCKET}"
+        - "arn:aws:s3:::${env:APP_AWS_FILE_BUCKET}/*"
 
   environment:
     JWT_SECRET: ${env:JWT_SECRET}
@@ -36,7 +36,7 @@ provider:
     URLS_API_ROOT: ${env:URLS_API_ROOT, '/api/v1'}
     DB_TYPE: ${env:DB_TYPE, 'postgres'}
     DB_HOST: ${env:DB_HOST, 'localhost'}
-    DB_NAME: ${env:DB_NAME, 'dwo-backend'}
+    DB_NAME: ${env:DB_NAME, 'app-backend'}
     DB_USER: ${env:DB_USER, 'ksquarelabs'}
     DB_PASSWORD: ${env:DB_PASSWORD, null}
     EMAIL_FROM_ADDRESS: ${env:EMAIL_FROM_ADDRESS, 'MyApp <no-reply@example.com>'}
@@ -45,8 +45,8 @@ provider:
     EMAIL_SMTP_SECURE: ${env:EMAIL_SMTP_SECURE, 'true'}
     EMAIL_SMTP_USER: ${env:EMAIL_SMTP_USER, null}
     EMAIL_SMTP_PASS: ${env:EMAIL_SMTP_PASS, null}
-    APP_AWS_BUCKET: ${env:APP_AWS_BUCKET, null}
-    NODE_ENV: ${env:DWO_NODE_ENV, null}
+    APP_AWS_FILE_BUCKET: ${env:APP_AWS_FILE_BUCKET, null}
+    NODE_ENV: ${env:APP_NODE_ENV, null}
     STAGE: ${env:SLS_STAGE, 'dev'}
   vpc:
     securityGroupIds:
@@ -89,6 +89,6 @@ functions:
     timeout: 10
     events:
       - s3:
-          bucket: ${env:DWO_AWS_FILE_BUCKET}
+          bucket: ${env:APP_AWS_FILE_BUCKET}
           event: s3:ObjectCreated:*
           existing: true

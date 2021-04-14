@@ -13,7 +13,7 @@ export const config = {
     sessionToken: process.env.AWS_SESSION_TOKEN,
     region: process.env.AWS_REGION,
     s3: {
-      fileBucketName: process.env.DWO_AWS_FILE_BUCKET,
+      fileBucketName: process.env.APP_AWS_FILE_BUCKET,
     },
   },
 

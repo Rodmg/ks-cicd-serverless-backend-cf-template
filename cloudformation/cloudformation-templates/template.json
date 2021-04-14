@@ -1,0 +1,1219 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Base Environment Configuration for app",
+  "Parameters": {
+    "GitSource": {
+      "Type": "String",
+      "AllowedValues": [
+        "BITBUCKET",
+        "CODECOMMIT",
+        "CODEPIPELINE",
+        "GITHUB",
+        "GITHUB_ENTERPRISE",
+        "NO_SOURCE",
+        "S3"
+      ],
+      "Description": "Service where your Git repository is hosted"
+    },
+    "GitLocation": {
+      "Type": "String",
+      "Description": "Url for your Git repository"
+    },
+    "JumpboxSSHAccessIp": {
+      "Type": "String",
+      "Default": "140.148.249.89/32",
+      "Description": "Your ip so you can access the jumpbox via SSH"
+    },
+    "JumpboxSSHKeyPair": {
+      "Type": "String",
+      "Default": "app-dev",
+      "Description": "Your key pair so you can access the jumpbox via SSH"
+    },
+    "AwsRegion": {
+      "Type": "String",
+      "Default": "us-east-2",
+      "Description": "AWS Region to use"
+    },
+    "DBName": {
+      "Type": "String",
+      "Default": "appbackend",
+      "Description": "Name of the DB in PosrgreSQL RDS"
+    },
+    "DBUser": {
+      "Type": "String",
+      "Default": "apppsuser",
+      "Description": "PostgreSQL Username"
+    },
+    "DBPassword": {
+      "Type": "String",
+      "Default": "yz9r-QrC4RiLB3E1L985ElCS-G7hG4J76slrHuoUPFQ",
+      "Description": "PostgreSQL Password"
+    },
+    "APIUrl": {
+      "Type": "String",
+      "Default": "api.example.com",
+      "Description": "Url for the API"
+    },
+    "JwtSecret": {
+      "Type": "String",
+      "Default": "hFGKtBQihgsE80jK1bkSYgmAcaFHauYzGROlC4EFgf4",
+      "Description": "Secret for signing JWTs. TODO: extract to SecretsManager"
+    }
+  },
+  "Resources": {
+    "appVpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/23",
+        "EnableDnsSupport": true,
+        "EnableDnsHostnames": true,
+        "InstanceTenancy": "default",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-vpc"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appPrivateSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "appVpc"
+        },
+        "CidrBlock": "10.0.0.0/25",
+        "AvailabilityZone": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AwsRegion"
+              },
+              "a"
+            ]
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-privateSubnet1"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appPrivateSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "appVpc"
+        },
+        "CidrBlock": "10.0.0.128/25",
+        "AvailabilityZone": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AwsRegion"
+              },
+              "c"
+            ]
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-privateSubnet2"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appPrivateSubnetRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "appVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-privateSubnetRouteTable"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appPrivateSubnet1RouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "appPrivateSubnet1"
+        },
+        "RouteTableId": {
+          "Ref": "appPrivateSubnetRouteTable"
+        }
+      }
+    },
+    "appPrivateSubnet2RouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "appPrivateSubnet2"
+        },
+        "RouteTableId": {
+          "Ref": "appPrivateSubnetRouteTable"
+        }
+      }
+    },
+    "appPublicSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "appVpc"
+        },
+        "CidrBlock": "10.0.1.0/25",
+        "AvailabilityZone": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AwsRegion"
+              },
+              "a"
+            ]
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-publicSubnet1"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appPublicSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "appVpc"
+        },
+        "CidrBlock": "10.0.1.128/25",
+        "AvailabilityZone": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AwsRegion"
+              },
+              "c"
+            ]
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-publicSubnet2"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appPublicSubnetRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "appVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-publicSubnetRouteTable"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appPublicSubnet1RouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "appPublicSubnet1"
+        },
+        "RouteTableId": {
+          "Ref": "appPublicSubnetRouteTable"
+        }
+      }
+    },
+    "appPublicSubnet2RouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "appPublicSubnet2"
+        },
+        "RouteTableId": {
+          "Ref": "appPublicSubnetRouteTable"
+        }
+      }
+    },
+    "appInternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-internetGateway"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appIGRoute": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "appPublicSubnetRouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "appInternetGateway"
+        }
+      }
+    },
+    "appBackendSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Default Backend SG",
+        "GroupName": "production-app-backendSecurityGroup",
+        "VpcId": {
+          "Ref": "appVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-backendSecurityGroup"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appNATGateway": {
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "appNATGwEIP",
+            "AllocationId"
+          ]
+        },
+        "SubnetId": {
+          "Ref": "appPublicSubnet1"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-NATGateway"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appNATGwAttach": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "appVpc"
+        },
+        "InternetGatewayId": {
+          "Ref": "appInternetGateway"
+        }
+      }
+    },
+    "appNATGwEIP": {
+      "DependsOn": "appNATGwAttach",
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-NATGwEIP"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appNATGwRoute": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "appPrivateSubnetRouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "appNATGateway"
+        }
+      }
+    },
+    "appDbSubnetGroup": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": "production-app-dbSubnetGroup",
+        "SubnetIds": [
+          {
+            "Ref": "appPrivateSubnet1"
+          },
+          {
+            "Ref": "appPrivateSubnet2"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-dbSubnetGroup"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appDbSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Open database for access",
+        "GroupName": "production-app-dbSecurityGroup",
+        "VpcId": {
+          "Ref": "appVpc"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "5432",
+            "ToPort": "5432",
+            "CidrIp": "10.0.0.0/23"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-dbSecurityGroup"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appDb": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBInstanceIdentifier": "production-app-db",
+        "DBName": {
+          "Ref": "DBName"
+        },
+        "DBInstanceClass": "db.t3.small",
+        "AllocatedStorage": "20",
+        "StorageType": "gp2",
+        "Engine": "postgres",
+        "EngineVersion": "12.5",
+        "MasterUsername": {
+          "Ref": "DBUser"
+        },
+        "MasterUserPassword": {
+          "Ref": "DBPassword"
+        },
+        "PubliclyAccessible": false,
+        "DBSubnetGroupName": {
+          "Ref": "appDbSubnetGroup"
+        },
+        "VPCSecurityGroups": [
+          {
+            "Fn::GetAtt": [
+              "appDbSecurityGroup",
+              "GroupId"
+            ]
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-db"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      },
+      "DeletionPolicy": "Snapshot"
+    },
+    "appFilesBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "AccessControl": "Private",
+        "BucketName": "production-app-files-bucket",
+        "CorsConfiguration": {
+          "CorsRules": [
+            {
+              "AllowedHeaders": [
+                "*"
+              ],
+              "AllowedMethods": [
+                "PUT"
+              ],
+              "AllowedOrigins": [
+                "*"
+              ],
+              "ExposedHeaders": [],
+              "MaxAge": 3000
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-files-bucket"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "appJumpboxSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "SSH Access",
+        "GroupName": "production-app-jumpboxSecurityGroup",
+        "VpcId": {
+          "Ref": "appVpc"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": {
+              "Ref": "JumpboxSSHAccessIp"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-jumpboxSecurityGroup"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "jumpbox": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": "ami-07efac79022b86107",
+        "KeyName": {
+          "Ref": "JumpboxSSHKeyPair"
+        },
+        "InstanceType": "t3.micro",
+        "SecurityGroupIds": [
+          {
+            "Ref": "appJumpboxSecurityGroup"
+          }
+        ],
+        "SubnetId": {
+          "Ref": "appPublicSubnet1"
+        },
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/sda1",
+            "Ebs": {
+              "VolumeSize": "20"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-app-jumpbox"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "jumpoxEIP": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "jumpbox"
+        }
+      }
+    },
+    "appBackendBuildRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "codebuild.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+          }
+        },
+        "Policies": [
+          {
+            "PolicyName": "root",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": "sns:*",
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "sqs:*",
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "events:*",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ],
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AWSLambda_FullAccess",
+          "arn:aws:iam::aws:policy/IAMFullAccess",
+          "arn:aws:iam::aws:policy/AmazonS3FullAccess",
+          "arn:aws:iam::aws:policy/AmazonAPIGatewayInvokeFullAccess",
+          "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs",
+          "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess",
+          "arn:aws:iam::aws:policy/AmazonAPIGatewayAdministrator",
+          "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForCloudFormation",
+          "arn:aws:iam::aws:policy/AWSCloudFormationFullAccess"
+        ]
+      }
+    },
+    "appBackendCodeBuild": {
+      "Type": "AWS::CodeBuild::Project",
+      "Properties": {
+        "Name": "production-app-backend",
+        "Description": "Builds and deploys app project",
+        "ServiceRole": {
+          "Fn::GetAtt": [
+            "appBackendBuildRole",
+            "Arn"
+          ]
+        },
+        "Artifacts": {
+          "Type": "no_artifacts"
+        },
+        "Environment": {
+          "Type": "LINUX_CONTAINER",
+          "ComputeType": "BUILD_GENERAL1_SMALL",
+          "Image": "aws/codebuild/amazonlinux2-x86_64-standard:3.0",
+          "EnvironmentVariables": [
+            {
+              "Name": "APP_NODE_ENV",
+              "Type": "PLAINTEXT",
+              "Value": "production"
+            },
+            {
+              "Name": "APP_AWS_FILE_BUCKET",
+              "Type": "PLAINTEXT",
+              "Value": "production-app-files-bucket"
+            },
+            {
+              "Name": "SLS_STAGE",
+              "Type": "PLAINTEXT",
+              "Value": "production"
+            },
+            {
+              "Name": "SLS_REGION",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Ref": "AwsRegion"
+              }
+            },
+            {
+              "Name": "SLS_SG",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Ref": "appBackendSecurityGroup"
+              }
+            },
+            {
+              "Name": "SLS_SN1",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Ref": "appPrivateSubnet1"
+              }
+            },
+            {
+              "Name": "SLS_SN2",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Ref": "appPrivateSubnet2"
+              }
+            },
+            {
+              "Name": "JWT_SECRET",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Ref": "JwtSecret"
+              }
+            },
+            {
+              "Name": "URLS_PROTOCOL",
+              "Type": "PLAINTEXT",
+              "Value": "https"
+            },
+            {
+              "Name": "URLS_URL",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Ref": "APIUrl"
+              }
+            },
+            {
+              "Name": "URLS_PORT",
+              "Type": "PLAINTEXT",
+              "Value": ""
+            },
+            {
+              "Name": "DB_HOST",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Fn::GetAtt": [
+                  "appDb",
+                  "Endpoint.Address"
+                ]
+              }
+            },
+            {
+              "Name": "DB_NAME",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Ref": "DBName"
+              }
+            },
+            {
+              "Name": "DB_USER",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Ref": "DBUser"
+              }
+            },
+            {
+              "Name": "DB_PASSWORD",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Ref": "DBPassword"
+              }
+            }
+          ]
+        },
+        "Source": {
+          "Type": {
+            "Ref": "GitSource"
+          },
+          "Location": {
+            "Ref": "GitLocation"
+          }
+        },
+        "SourceVersion": "master",
+        "Triggers": {
+          "Webhook": true,
+          "FilterGroups": [
+            [
+              {
+                "Type": "EVENT",
+                "Pattern": "PUSH, PULL_REQUEST_MERGED"
+              },
+              {
+                "Type": "HEAD_REF",
+                "Pattern": "master"
+              }
+            ]
+          ]
+        },
+        "TimeoutInMinutes": 30,
+        "LogsConfig": {
+          "CloudWatchLogs": {
+            "Status": "ENABLED"
+          }
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-appBackendCodeBuild"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appDbBackups": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": "production-app-db-backups",
+        "AccessControl": "LogDeliveryWrite",
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "LoggingConfiguration": {
+          "LogFilePrefix": "logs/"
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "Reduce old backups costs",
+              "Prefix": "backups/",
+              "Status": "Enabled",
+              "ExpirationInDays": 180,
+              "NoncurrentVersionExpirationInDays": 7,
+              "Transitions": [
+                {
+                  "StorageClass": "STANDARD_IA",
+                  "TransitionInDays": 30
+                }
+              ]
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-appDbBackups"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appDbBackupsPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "appDbBackups"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Id": "PutObjPolicy",
+          "Statement": [
+            {
+              "Sid": "DenyIncorrectEncryptionHeader",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:PutObject",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "appDbBackups"
+                    },
+                    "/*"
+                  ]
+                ]
+              },
+              "Condition": {
+                "StringNotEquals": {
+                  "s3:x-amz-server-side-encryption": "AES256"
+                }
+              }
+            },
+            {
+              "Sid": "DenyUnEncryptedObjectUploads",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:PutObject",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "appDbBackups"
+                    },
+                    "/*"
+                  ]
+                ]
+              },
+              "Condition": {
+                "Null": {
+                  "s3:x-amz-server-side-encryption": true
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "appBackupBuildRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "codebuild.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+          }
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AmazonS3FullAccess",
+          "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+        ],
+        "Policies": [
+          {
+            "PolicyName": "CodeBuildAccess",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Action": [
+                    "logs:*",
+                    "ec2:CreateNetworkInterface",
+                    "ec2:DescribeNetworkInterfaces",
+                    "ec2:DeleteNetworkInterface",
+                    "ec2:DescribeSubnets",
+                    "ec2:DescribeSecurityGroups",
+                    "ec2:DescribeDhcpOptions",
+                    "ec2:DescribeVpcs",
+                    "ec2:CreateNetworkInterfacePermission"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "appDbBackupSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Empty",
+        "GroupName": "production-appDbBackupSecurityGroup",
+        "VpcId": {
+          "Ref": "appVpc"
+        },
+        "SecurityGroupIngress": [],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-appDbBackupSecurityGroup"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appDbBackupCodeBuild": {
+      "Type": "AWS::CodeBuild::Project",
+      "Properties": {
+        "Name": "production-app-db-backup",
+        "Description": "Backups DB into S3",
+        "ServiceRole": {
+          "Fn::GetAtt": [
+            "appBackupBuildRole",
+            "Arn"
+          ]
+        },
+        "Artifacts": {
+          "Type": "no_artifacts"
+        },
+        "Environment": {
+          "Type": "LINUX_CONTAINER",
+          "ComputeType": "BUILD_GENERAL1_SMALL",
+          "Image": "aws/codebuild/standard:5.0",
+          "EnvironmentVariables": [
+            {
+              "Name": "DB_BACKUP_BUCKET",
+              "Type": "PLAINTEXT",
+              "Value": "production-app-db-backups"
+            },
+            {
+              "Name": "DB_HOST",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Fn::GetAtt": [
+                  "appDb",
+                  "Endpoint.Address"
+                ]
+              }
+            },
+            {
+              "Name": "DB_NAME",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Ref": "DBName"
+              }
+            },
+            {
+              "Name": "DB_USER",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Ref": "DBUser"
+              }
+            },
+            {
+              "Name": "DB_PASSWORD",
+              "Type": "PLAINTEXT",
+              "Value": {
+                "Ref": "DBPassword"
+              }
+            }
+          ]
+        },
+        "Source": {
+          "Type": "NO_SOURCE",
+          "BuildSpec": "\nversion: 0.2\n\nphases:\n  build:\n    commands:\n      - apt-get --allow-unauthenticated update -y\n      - apt-get install -y postgresql-client\n      - echo $DB_HOST:5432:$DB_NAME:$DB_USER:$DB_PASSWORD > ~/.pgpass\n      - chmod 600 ~/.pgpass\n      - pg_dump -h $DB_HOST -U $DB_USER -Fc --file=backup.custom $DB_NAME\n  post_build:\n    commands:\n      - aws s3 cp backup.custom s3://$DB_BACKUP_BUCKET/backups/$(date \"+%Y-%m-%d\")-backup.custom --sse AES256\n"
+        },
+        "TimeoutInMinutes": 30,
+        "LogsConfig": {
+          "CloudWatchLogs": {
+            "Status": "ENABLED"
+          }
+        },
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Ref": "appJumpboxSecurityGroup"
+            }
+          ],
+          "Subnets": [
+            {
+              "Ref": "appPrivateSubnet1"
+            },
+            {
+              "Ref": "appPrivateSubnet2"
+            }
+          ],
+          "VpcId": {
+            "Ref": "appVpc"
+          }
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "production-appDbBackupCodeBuild"
+          },
+          {
+            "Key": "Project",
+            "Value": "app"
+          },
+          {
+            "Key": "Env",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "appDbBackupSchedule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Description": "Backup the DB Daily",
+        "Name": "production-appDbBackupSchedule",
+        "ScheduleExpression": "cron(0 8 * * ? *)",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "appDbBackupCodeBuild",
+                "Arn"
+              ]
+            },
+            "Id": "appDbBackupScheduleTarget",
+            "RoleArn": {
+              "Fn::GetAtt": [
+                "appPermissionForEventsToInvokeCodeBuild",
+                "Arn"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "appPermissionForEventsToInvokeCodeBuild": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": {
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Principal": {
+              "Service": "events.amazonaws.com"
+            }
+          }
+        },
+        "Policies": [
+          {
+            "PolicyName": "EventCodeBuildAccess",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Action": "codebuild:StartBuild",
+                  "Effect": "Allow",
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "appDbBackupCodeBuild",
+                      "Arn"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {}
+}

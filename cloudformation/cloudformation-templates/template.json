@@ -4,6 +4,7 @@
   "Parameters": {
     "GitSource": {
       "Type": "String",
+      "Default": "GITHUB",
       "AllowedValues": [
         "BITBUCKET",
         "CODECOMMIT",
@@ -17,6 +18,7 @@
     },
     "GitLocation": {
       "Type": "String",
+      "Default": "https://github.com/ksquareincmx/ks-cicd-serverless-backend-cf-template",
       "Description": "Url for your Git repository"
     },
     "JumpboxSSHAccessIp": {
@@ -46,7 +48,7 @@
     },
     "DBPassword": {
       "Type": "String",
-      "Default": "yz9r-QrC4RiLB3E1L985ElCS-G7hG4J76slrHuoUPFQ",
+      "Default": "Wu99KcPsBeHPZo4RrWgvcrOjAElFZjzD5K7C7UQXpV4",
       "Description": "PostgreSQL Password"
     },
     "APIUrl": {
@@ -56,7 +58,7 @@
     },
     "JwtSecret": {
       "Type": "String",
-      "Default": "hFGKtBQihgsE80jK1bkSYgmAcaFHauYzGROlC4EFgf4",
+      "Default": "SBqzr_iig8Y1tN3lCB8gEWVW7-9BEYvNEOkCh8V2Jd0",
       "Description": "Secret for signing JWTs. TODO: extract to SecretsManager"
     }
   },

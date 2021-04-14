@@ -76,6 +76,12 @@ function doWatch() {
 }
 const watch = gulp.series(cleanServe, doWatch);
 
+function doSlsWatch() {
+  executeServerless();
+  return gulp.watch("app/**/*.ts", gulp.series(compile, executeServerless));
+}
+const slsWatch = gulp.series(build, doSlsWatch);
+
 function doSql() {
   return execute([
     "--require",
@@ -131,6 +137,7 @@ module.exports = {
   build,
   cleanServe,
   watch,
+  slsWatch,
   serve,
   sql,
   seed,

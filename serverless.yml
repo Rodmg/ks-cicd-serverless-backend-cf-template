@@ -1,0 +1,94 @@
+service: app-backend
+
+plugins:
+  - serverless-offline
+  - serverless-apigw-binary
+
+custom:
+  apigwBinary:
+    types:
+      - "image/jpeg"
+      - "image/png"
+      - "text/csv"
+      - "multipart/form-data"
+      - "application/pdf"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  versionFunctions: false
+  stage: ${env:SLS_STAGE, 'dev'}
+  region: ${env:SLS_REGION, 'us-east-2'}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource:
+        - "arn:aws:s3:::${env:APP_AWS_BUCKET}"
+        - "arn:aws:s3:::${env:APP_AWS_BUCKET}/*"
+
+  environment:
+    JWT_SECRET: ${env:JWT_SECRET}
+    LOG_LEVEL: ${env:LOG_LEVEL, 'debug'}
+    URLS_PROTOCOL: ${env:URLS_PROTOCOL, 'http'}
+    URLS_URL: ${env:URLS_URL, 'localhost'}
+    URLS_PORT: ${env:URLS_PORT, '8888'}
+    URLS_API_ROOT: ${env:URLS_API_ROOT, '/api/v1'}
+    DB_TYPE: ${env:DB_TYPE, 'postgres'}
+    DB_HOST: ${env:DB_HOST, 'localhost'}
+    DB_NAME: ${env:DB_NAME, 'dwo-backend'}
+    DB_USER: ${env:DB_USER, 'ksquarelabs'}
+    DB_PASSWORD: ${env:DB_PASSWORD, null}
+    EMAIL_FROM_ADDRESS: ${env:EMAIL_FROM_ADDRESS, 'MyApp <no-reply@example.com>'}
+    EMAIL_SMTP_HOST: ${env:EMAIL_SMTP_HOST, 'smtp.gmail.com'}
+    EMAIL_SMPT_PORT: ${env:EMAIL_SMPT_PORT, '587'}
+    EMAIL_SMTP_SECURE: ${env:EMAIL_SMTP_SECURE, 'true'}
+    EMAIL_SMTP_USER: ${env:EMAIL_SMTP_USER, null}
+    EMAIL_SMTP_PASS: ${env:EMAIL_SMTP_PASS, null}
+    APP_AWS_BUCKET: ${env:APP_AWS_BUCKET, null}
+    NODE_ENV: ${env:DWO_NODE_ENV, null}
+    STAGE: ${env:SLS_STAGE, 'dev'}
+  vpc:
+    securityGroupIds:
+      - ${env:SLS_SG, 'sg-dummy'}
+    subnetIds:
+      - ${env:SLS_SN1, 'sn-dummy1'}
+      - ${env:SLS_SN2, 'sn-dummy2'}
+
+functions:
+  app:
+    handler: dist/serverless/main.handler
+    timeout: 10
+    reservedConcurrency: 100
+    events:
+      - http: ANY /
+      - http: "ANY /{proxy+}"
+  seed:
+    handler: dist/serverless/seed.handler
+    timeout: 10
+  updateDBSchema:
+    handler: dist/serverless/updateDBSchema.handler
+  clearDB:
+    handler: dist/serverless/clearDB.handler
+  clearAndSeedDB:
+    handler: dist/serverless/clearAndSeedDB.handler
+    timeout: 10
+  migrate:
+    handler: dist/serverless/migrate.handler
+    timeout: 30
+  scheduledJanitorService:
+    handler: dist/serverless/scheduledJanitorService.handler
+    timeout: 300
+    events:
+      - schedule:
+          # 1 am CST (7am UTC)
+          rate: cron(0 7 * * ? *)
+          enabled: true
+  s3ProcessUploadedFile:
+    handler: dist/serverless/s3ProcessUploadedFile.handler
+    timeout: 10
+    events:
+      - s3:
+          bucket: ${env:DWO_AWS_FILE_BUCKET}
+          event: s3:ObjectCreated:*
+          existing: true

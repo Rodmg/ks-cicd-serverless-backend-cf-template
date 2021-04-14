@@ -7,6 +7,16 @@ export const config = {
 
   env: process.env.NODE_ENV || "development",
 
+  aws: {
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    sessionToken: process.env.AWS_SESSION_TOKEN,
+    region: process.env.AWS_REGION,
+    s3: {
+      fileBucketName: process.env.DWO_AWS_FILE_BUCKET,
+    },
+  },
+
   jwt: {
     secret:
       process.env.JWT_SECRET || "xEqxsp-rojsMKxmluLrP9yjMdkeH3bJ3lkZdjMY_wto",
